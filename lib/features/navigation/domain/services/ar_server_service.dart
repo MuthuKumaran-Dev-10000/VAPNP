@@ -55,13 +55,14 @@ class ArServerService {
     return false;
   }
 
-  /// Registers a Landmark place: uploads image + touch pixel location.
+  /// Registers a Landmark place: uploads image + touch pixel location + form schema
   static Future<Map<String, dynamic>?> addLandmark({
     required String baseUrl,
     required String name,
     required String description,
     required double touchX,
     required double touchY,
+    required String formSchema, // JSON string
     required Uint8List imageBytes,
   }) async {
     try {
@@ -72,6 +73,7 @@ class ArServerService {
       request.fields['description'] = description;
       request.fields['touch_x'] = touchX.toString();
       request.fields['touch_y'] = touchY.toString();
+      request.fields['form_schema'] = formSchema;
 
       request.files.add(
         http.MultipartFile.fromBytes(
@@ -89,6 +91,50 @@ class ArServerService {
       }
     } catch (_) {}
     return null;
+  }
+
+  /// Updates an existing landmark metadata and form schema
+  static Future<bool> updateLandmark({
+    required String baseUrl,
+    required String landmarkId,
+    required String name,
+    required String description,
+    required String formSchema,
+  }) async {
+    try {
+      final uri = Uri.parse("$baseUrl/graph/landmarks/$landmarkId");
+      final response = await http.put(
+        uri,
+        body: {
+          'name': name,
+          'description': description,
+          'form_schema': formSchema,
+        },
+      );
+      return response.statusCode == 200;
+    } catch (_) {}
+    return false;
+  }
+
+  /// Submits form readings to backend daily log JSON
+  static Future<bool> submitReadings({
+    required String baseUrl,
+    required String landmarkId,
+    required Map<String, String> readings,
+  }) async {
+    try {
+      final uri = Uri.parse("$baseUrl/readings");
+      final response = await http.post(
+        uri,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          'landmark_id': landmarkId,
+          'readings': readings,
+        }),
+      );
+      return response.statusCode == 200;
+    } catch (_) {}
+    return false;
   }
 
   /// Queries visual localization with query viewfinder frame.
