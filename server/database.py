@@ -13,6 +13,7 @@ class Landmark(Base):
     descriptor_path = Column(String, nullable=False) # Path to descriptor .npy file
     touch_x = Column(Float, nullable=False) # Relative x position (0.0 to 1.0)
     touch_y = Column(Float, nullable=False) # Relative y position (0.0 to 1.0)
+    form_schema = Column(String, default="[]") # JSON string containing fields list
 
 # Initialize Session
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})

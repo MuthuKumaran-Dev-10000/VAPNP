@@ -77,6 +77,7 @@ def localize_user(db_session: Session, image_bytes: bytes):
                 "y": round(proj_y, 4),
                 "confidence": round(confidence * 100, 1),
                 "image_url": lm.image_url,
+                "form_schema": lm.form_schema,
                 "tracking_points": inlier_pts # List of dicts: [{"x": rx, "y": ry}, ...]
             })
 

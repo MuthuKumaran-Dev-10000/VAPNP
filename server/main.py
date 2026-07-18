@@ -1,5 +1,7 @@
 import os
 import uuid
+import datetime
+import json
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -50,6 +52,7 @@ async def add_landmark(
     description: str = Form(""),
     touch_x: float = Form(...),
     touch_y: float = Form(...),
+    form_schema: str = Form("[]"), # JSON array containing custom textboxes names
     image: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
@@ -68,7 +71,7 @@ async def add_landmark(
     # 2. Save image and descriptors locally
     local_url, desc_path = vision.save_assets(landmark_id, contents, desc)
 
-    # 3. Save landmark coordinates to SQLite database
+    # 3. Save landmark coordinates and schema to SQLite database
     landmark = Landmark(
         id=landmark_id,
         name=name,
@@ -76,7 +79,8 @@ async def add_landmark(
         image_url=local_url,
         descriptor_path=desc_path,
         touch_x=touch_x,
-        touch_y=touch_y
+        touch_y=touch_y,
+        form_schema=form_schema
     )
     
     db.add(landmark)
@@ -88,8 +92,63 @@ async def add_landmark(
         "image_url": local_url,
         "features_extracted": len(desc),
         "touch_x": touch_x,
-        "touch_y": touch_y
+        "touch_y": touch_y,
+        "form_schema": form_schema
     }
+
+@app.put("/graph/landmarks/{landmark_id}")
+def update_landmark(
+    landmark_id: str,
+    name: str = Form(...),
+    description: str = Form(""),
+    form_schema: str = Form("[]"),
+    db: Session = Depends(get_db)
+):
+    landmark = db.query(Landmark).filter(Landmark.id == landmark_id).first()
+    if not landmark:
+        raise HTTPException(status_code=404, detail="Landmark not found")
+        
+    landmark.name = name
+    landmark.description = description
+    landmark.form_schema = form_schema
+    
+    db.commit()
+    return {"status": "ok", "landmark_id": landmark_id}
+
+@app.post("/readings")
+async def save_readings(payload: dict):
+    landmark_id = payload.get("landmark_id")
+    readings = payload.get("readings")
+    if not landmark_id:
+        raise HTTPException(status_code=400, detail="Missing landmark_id")
+        
+    # Format date filename: e.g. 18-07-2026_readings.json
+    now = datetime.datetime.now()
+    filename = now.strftime("%d-%m-%Y_readings.json")
+    filepath = os.path.join(STORAGE_DIR, filename)
+    
+    # Read existing readings
+    existing_data = []
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, "r") as f:
+                existing_data = json.load(f)
+        except Exception:
+            existing_data = []
+            
+    # Append new entry
+    new_entry = {
+        "landmark_id": landmark_id,
+        "timestamp": now.isoformat(),
+        "readings": readings
+    }
+    existing_data.append(new_entry)
+    
+    # Save back to file
+    with open(filepath, "w") as f:
+        json.dump(existing_data, f, indent=4)
+        
+    return {"status": "ok", "file": filename, "entries": len(existing_data)}
 
 @app.post("/localization")
 async def localize(
@@ -109,7 +168,8 @@ def get_landmarks(db: Session = Depends(get_db)):
         "description": l.description,
         "image_url": l.image_url,
         "touch_x": l.touch_x,
-        "touch_y": l.touch_y
+        "touch_y": l.touch_y,
+        "form_schema": l.form_schema
     } for l in landmarks]
 
 if __name__ == "__main__":

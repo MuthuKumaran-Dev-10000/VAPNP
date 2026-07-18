@@ -1,0 +1,17 @@
+[
+    {
+        "landmark_id": "lm_968068ce",
+        "timestamp": "2026-07-18T15:43:46.913519",
+        "readings": {
+            "is any one sitting": "no"
+        }
+    },
+    {
+        "landmark_id": "lm_b7bf791b",
+        "timestamp": "2026-07-18T16:07:00.667903",
+        "readings": {
+            "detergent scoop count": "5",
+            "clothes count": "52"
+        }
+    }
+]

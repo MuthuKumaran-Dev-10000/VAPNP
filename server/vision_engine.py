@@ -72,16 +72,16 @@ class SIFTExpVisionEngine(AbstractVisionEngine):
         pts_train = np.float32([train_kp[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
         pts_query = np.float32([query_kp[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
         
-        # Find homography mapping Train -> Query
-        H, mask = cv2.findHomography(pts_train, pts_query, cv2.RANSAC, 5.0)
+        # Find homography mapping Train -> Query with tighter threshold (3.0 pixels)
+        H, mask = cv2.findHomography(pts_train, pts_query, cv2.RANSAC, 3.0)
         if H is None or mask is None:
-            return False, 0.0, 0.0, 0.0
+            return False, 0.0, 0.0, 0.0, []
         
         inliers = np.sum(mask)
         confidence = float(inliers) / len(matches) if len(matches) > 0 else 0.0
         
-        # Valid matches require minimal visual descriptors support
-        is_valid = inliers >= 6 and confidence > 0.35
+        # Require higher minimum inlier matches for stability (10 inliers minimum)
+        is_valid = inliers >= 10 and confidence > 0.45
         
         inlier_pts = []
         if is_valid and H is not None and mask is not None:
@@ -142,14 +142,14 @@ class ORBExpVisionEngine(AbstractVisionEngine):
         pts_train = np.float32([train_kp[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
         pts_query = np.float32([query_kp[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
         
-        H, mask = cv2.findHomography(pts_train, pts_query, cv2.RANSAC, 5.0)
+        H, mask = cv2.findHomography(pts_train, pts_query, cv2.RANSAC, 3.0)
         if H is None or mask is None:
-            return False, 0.0, 0.0, 0.0
+            return False, 0.0, 0.0, 0.0, []
         
         inliers = np.sum(mask)
         confidence = float(inliers) / len(matches) if len(matches) > 0 else 0.0
         
-        is_valid = inliers >= 5 and confidence > 0.30
+        is_valid = inliers >= 8 and confidence > 0.40
         
         inlier_pts = []
         if is_valid and H is not None and mask is not None:
