@@ -13,5 +13,26 @@
             "detergent scoop count": "5",
             "clothes count": "52"
         }
+    },
+    {
+        "landmark_id": "lm_8a8008b2",
+        "timestamp": "2026-07-18T17:00:17.467389",
+        "readings": {
+            "no of dishes": "5"
+        }
+    },
+    {
+        "landmark_id": "lm_cabe3da1",
+        "timestamp": "2026-07-18T17:01:08.257773",
+        "readings": {
+            "is it turned on": "no not in service"
+        }
+    },
+    {
+        "landmark_id": "lm_bbd46629",
+        "timestamp": "2026-07-18T17:05:06.992440",
+        "readings": {
+            "what is the time now": "5:05 18/07/2026"
+        }
     }
 ]

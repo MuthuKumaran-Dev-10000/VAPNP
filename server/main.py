@@ -8,10 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from config import HOST, PORT, STORAGE_DIR
-from database import SessionLocal, init_db, Landmark
+from database import SessionLocal, init_db, Landmark, RouteWaypoint
 from firebase_sync import sync_server_url
 from vision_engine import get_vision_engine
-from localization import localize_user
+from localization import localize_user, localize_route_user
 
 app = FastAPI(title="Factory Digital Twin Camera Localization Server")
 
@@ -171,6 +171,53 @@ def get_landmarks(db: Session = Depends(get_db)):
         "touch_y": l.touch_y,
         "form_schema": l.form_schema
     } for l in landmarks]
+
+@app.post("/routes/waypoints")
+async def add_route_waypoint(
+    route_key: str = Form(...),
+    step_index: int = Form(...),
+    instruction: str = Form(...),
+    image: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    contents = await image.read()
+    vision = get_vision_engine()
+    kp, desc, w, h = vision.extract_features(contents)
+    
+    if desc is None or len(desc) == 0:
+        raise HTTPException(status_code=400, detail="Could not extract features from image")
+        
+    waypoint_id = f"wp_{str(uuid.uuid4())[:8]}"
+    local_url, desc_path = vision.save_assets(waypoint_id, contents, desc)
+    
+    waypoint = RouteWaypoint(
+        id=waypoint_id,
+        route_key=route_key,
+        step_index=step_index,
+        instruction=instruction,
+        image_url=local_url,
+        descriptor_path=desc_path
+    )
+    db.add(waypoint)
+    db.commit()
+    
+    return {
+        "status": "ok",
+        "waypoint_id": waypoint_id,
+        "route_key": route_key,
+        "step_index": step_index,
+        "instruction": instruction
+    }
+
+@app.post("/routes/localize")
+async def localize_route(
+    route_key: str = Form(...),
+    image: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    contents = await image.read()
+    result = localize_route_user(db, route_key=route_key, image_bytes=contents)
+    return {"match": result}
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, String, Float
+from sqlalchemy import create_engine, Column, String, Float, Integer
 from sqlalchemy.orm import declarative_base, sessionmaker
 from config import DATABASE_URL
 
@@ -14,6 +14,15 @@ class Landmark(Base):
     touch_x = Column(Float, nullable=False) # Relative x position (0.0 to 1.0)
     touch_y = Column(Float, nullable=False) # Relative y position (0.0 to 1.0)
     form_schema = Column(String, default="[]") # JSON string containing fields list
+
+class RouteWaypoint(Base):
+    __tablename__ = 'route_waypoints'
+    id = Column(String, primary_key=True)
+    route_key = Column(String, nullable=False) # route_{from_id}_{to_id}
+    step_index = Column(Integer, nullable=False)
+    instruction = Column(String, nullable=False)
+    image_url = Column(String, nullable=False)
+    descriptor_path = Column(String, nullable=False)
 
 # Initialize Session
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
